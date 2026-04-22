@@ -1,0 +1,208 @@
+@{
+    ViewData["Title"] = "Detalhes do Dentista";
+}
+@model Pi_Odonto.Models.Dentista
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-lg">
+                <div class="card-header bg-info text-white text-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-user-md"></i> Detalhes do Dentista
+                    </h2>
+                </div>
+
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-primary">
+                                    <i class="fas fa-user"></i> Nome:
+                                </label>
+                                <p class="form-control-plaintext border-bottom">@Model.Nome</p>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-primary">
+                                    <i class="fas fa-id-card"></i> CPF:
+                                </label>
+                                <p class="form-control-plaintext border-bottom">
+                                    @if (Model.Cpf.Length == 11)
+                                    {
+                                        @($"{Model.Cpf.Substring(0, 3)}.{Model.Cpf.Substring(3, 3)}.{Model.Cpf.Substring(6, 3)}-{Model.Cpf.Substring(9, 2)}")
+                                    }
+                                    else
+                                    {
+                                        @Model.Cpf
+                                    }
+                                </p>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-primary">
+                                    <i class="fas fa-certificate"></i> CRO:
+                                </label>
+                                <p class="form-control-plaintext border-bottom">
+                                    <span class="badge bg-info fs-6">@Model.Cro</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-primary">
+                                    <i class="fas fa-phone"></i> Telefone:
+                                </label>
+                                <p class="form-control-plaintext border-bottom">
+                                    @if (Model.Telefone.Length == 11)
+                                    {
+                                        <a href="tel:@Model.Telefone" class="text-decoration-none">
+                                            @($"({Model.Telefone.Substring(0, 2)}) {Model.Telefone.Substring(2, 5)}-{Model.Telefone.Substring(7, 4)}")
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        @Model.Telefone
+                                    }
+                                </p>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-primary">
+                                    <i class="fas fa-envelope"></i> Email:
+                                </label>
+                                <p class="form-control-plaintext border-bottom">
+                                    <a href="mailto:@Model.Email" class="text-decoration-none">@Model.Email</a>
+                                </p>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-primary">
+                                    <i class="fas fa-map-marker-alt"></i> Endereço:
+                                </label>
+                                <p class="form-control-plaintext border-bottom">@Model.Endereco</p>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-primary">
+                                    <i class="fas fa-info-circle"></i> Situação:
+                                </label>
+                                <p class="form-control-plaintext border-bottom">
+                                    @{
+                                        var situacao = Model.Situacao ?? "candidato";
+                                        var situacaoClass = situacao.ToLower() switch
+                                        {
+                                            "contratado" => "bg-success",
+                                            "banco de talento" => "bg-info",
+                                            "desvinculado" => "bg-secondary",
+                                            _ => "bg-warning"
+                                        };
+                                    }
+                                    <span class="badge @situacaoClass">@situacao</span>
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Motivacao))
+            {
+                <div class="card shadow-lg mt-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-heart"></i> Motivação
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">@Model.Motivacao</p>
+                    </div>
+                </div>
+            }
+
+            @if (Model.Disponibilidades != null && Model.Disponibilidades.Any())
+            {
+                <div class="card shadow-lg mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-check"></i> Disponibilidades
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @{
+                                var ordemDias = new Dictionary<string, int>
+                                {
+                                    { "Segunda-feira", 1 },
+                                    { "Terça-feira", 2 },
+                                    { "Quarta-feira", 3 },
+                                    { "Quinta-feira", 4 },
+                                    { "Sexta-feira", 5 },
+                                    { "Sábado", 6 },
+                                    { "Domingo", 7 }
+                                };
+                                
+                                var disponibilidadesAgrupadas = Model.Disponibilidades
+                                    .Where(d => d.Ativo)
+                                    .GroupBy(d => d.DiaSemana)
+                                    .OrderBy(g => ordemDias.ContainsKey(g.Key) ? ordemDias[g.Key] : 99);
+                            }
+                            @foreach (var grupo in disponibilidadesAgrupadas)
+                            {
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border-primary">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-primary text-center mb-3">
+                                                <i class="fas fa-calendar-day"></i> @grupo.Key
+                                            </h6>
+                                            <div class="text-center">
+                                                @foreach (var disponibilidade in grupo.OrderBy(d => d.HoraInicio))
+                                                {
+                                                    <p class="mb-2">
+                                                        <span class="badge bg-success">@disponibilidade.HoraInicio.ToString(@"hh\:mm")</span>
+                                                        <span class="text-muted"> até </span>
+                                                        <span class="badge bg-danger">@disponibilidade.HoraFim.ToString(@"hh\:mm")</span>
+                                                    </p>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="card shadow-lg mt-4">
+                <div class="card-body text-center">
+                    <div class="d-flex justify-content-center">
+                        
+                        <a href="@Url.Action("EditarDentista", new { id = Model.Id })" class="btn btn-warning btn-lg me-2">
+                            <i class="fas fa-edit"></i> Editar
+                        </a>
+
+                        <form asp-action="ToggleAtivoDentista" asp-route-id="@Model.Id" method="post" class="d-inline me-2">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-lg @(Model.Ativo ? "btn-danger" : "btn-success")" 
+                                    onclick="return confirm('Tem certeza que deseja @(Model.Ativo ? "desativar" : "ativar") este dentista?');">
+                                <i class="fas fa-@(Model.Ativo ? "ban" : "check")"></i> @(Model.Ativo ? "Desativar" : "Ativar")
+                            </button>
+                        </form>
+                        
+                        <a href="javascript:history.back()" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </a>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+}

@@ -1,0 +1,1195 @@
+﻿@{
+    ViewData["Title"] = "Cadastro de Responsável";
+}
+@using Pi_Odonto.ViewModels
+@model ResponsavelCriancaViewModel
+
+<style>
+    :root {
+        --cor-primaria: #4A90E2;
+        --cor-secundaria: #66BB6A;
+        --cor-accent: #FFD700;
+        --cor-info: #17a2b8;
+        --cor-danger: #dc3545;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        font-family: 'Poppins', sans-serif;
+    }
+
+    .card-compact {
+        border-radius: 15px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        border: none;
+    }
+
+    .card-header-compact {
+        background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
+        border-radius: 15px 15px 0 0;
+        padding: 1rem 1.5rem;
+    }
+
+    .progress-steps {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding: 0 1rem;
+    }
+
+    .step {
+        display: flex;
+        align-items: center;
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .step.active {
+        color: var(--cor-primaria);
+    }
+
+    .step.completed {
+        color: var(--cor-secundaria);
+    }
+
+    .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 2px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .step.active .step-number {
+        border-color: var(--cor-primaria);
+        background: var(--cor-primaria);
+        color: white;
+    }
+
+    .step.completed .step-number {
+        border-color: var(--cor-secundaria);
+        background: var(--cor-secundaria);
+        color: white;
+    }
+
+    .step-connector {
+        width: 60px;
+        height: 2px;
+        background: #dee2e6;
+        margin: 0 1rem;
+    }
+
+    .step.completed + .step-connector {
+        background: var(--cor-secundaria);
+    }
+
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--cor-primaria);
+    }
+
+    .form-section-crianca {
+        background: #e3f2fd;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid var(--cor-info);
+        position: relative;
+    }
+
+    .form-control-compact {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+        border-radius: 8px;
+    }
+
+    .form-label-compact {
+        font-weight: 500;
+        font-size: 0.85rem;
+        margin-bottom: 0.3rem;
+        color: #495057;
+    }
+
+    .btn-compact {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        border-radius: 8px;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .crianca-header {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--cor-info);
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .mb-compact {
+        margin-bottom: 0.75rem !important;
+    }
+
+    .container-compact {
+        max-width: 900px;
+        margin: 1rem auto;
+        padding: 0 1rem;
+    }
+
+    .remove-btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .step-content {
+        display: none;
+    }
+
+    .step-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .step-navigation {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .validation-error-custom {
+        color: #dc3545;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        display: none;
+    }
+
+    .loading-spinner {
+        display: none;
+        width: 14px;
+        height: 14px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid var(--cor-primaria);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: 8px;
+        vertical-align: middle;
+    }
+
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Adicione no bloco <style> do início do arquivo */
+    .form-control.is-invalid {
+        border-color: #dc3545 !important;
+        padding-right: calc(1.5em + 0.75rem);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    }
+
+        .form-control.is-invalid:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+
+    .crianca-error-message {
+        color: #dc3545;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        display: none;
+    }
+
+        .crianca-error-message.show {
+            display: block;
+        }
+
+</style>
+
+<div class="container-compact">
+    <div class="card card-compact">
+        <div class="card-header-compact text-white text-center">
+            <h2 class="mb-1" style="font-size: 1.3rem;">
+                <i class="fas fa-user-plus"></i> Cadastro de Responsável
+            </h2>
+            <p class="mb-0" style="font-size: 0.85rem; opacity: 0.9;">Complete o processo em 2 etapas simples</p>
+        </div>
+
+        <div class="card-body p-3">
+            <!-- Progress Steps -->
+            <div class="progress-steps">
+                <div class="step active" id="step1-indicator">
+                    <div class="step-number">1</div>
+                    <span>Dados do Responsável</span>
+                </div>
+                <div class="step-connector" id="connector1"></div>
+                <div class="step" id="step2-indicator">
+                    <div class="step-number">2</div>
+                    <span>Dados das Crianças</span>
+                </div>
+            </div>
+
+            <form asp-action="Create" method="post" id="cadastroForm">
+                <div asp-validation-summary="All" class="alert alert-danger d-none"></div>
+
+                <!-- Etapa 1: Dados do Responsável -->
+                <div class="step-content active" id="step1-content">
+                    <div class="form-section">
+                        <div class="section-title">
+                            <i class="fas fa-user" style="color: var(--cor-primaria);"></i>
+                            Seus Dados Pessoais
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-compact">
+                                    <label asp-for="Responsavel.Nome" class="form-label-compact">
+                                        Nome Completo <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Responsavel.Nome" class="form-control form-control-compact" placeholder="Digite seu nome completo" maxlength="50" required />
+                                    @* <span asp-validation-for="Responsavel.Nome" class="text-danger small"></span> *@
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-compact">
+                                    <label asp-for="Responsavel.Cpf" class="form-label-compact">
+                                        CPF <span class="text-danger">*</span>
+                                    </label>
+                                    <div style="position: relative;">
+                                        <input asp-for="Responsavel.Cpf" class="form-control form-control-compact" placeholder="000.000.000-00" id="cpfInput" maxlength="14" required />
+                                        <div class="loading-spinner" id="cpf-spinner"></div>
+                                    </div>
+                                    @* <span asp-validation-for="Responsavel.Cpf" class="text-danger small"></span> *@
+                                    <div class="validation-error-custom" id="cpf-error"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-compact">
+                                    <label asp-for="Responsavel.Telefone" class="form-label-compact">
+                                        @* Telefone <span class="text-danger">*</span> *@
+                                    </label>
+                                    <div style="position: relative;">
+                                        <input asp-for="Responsavel.Telefone" class="form-control form-control-compact" placeholder="(11) 99999-9999" id="telefoneInput" maxlength="15" required />
+                                        <div class="loading-spinner" id="telefone-spinner"></div>
+                                    </div>
+                                    @* <span asp-validation-for="Responsavel.Telefone" class="text-danger small"></span> *@
+                                    <div class="validation-error-custom" id="telefone-error"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-compact">
+                                    <label asp-for="Responsavel.Email" class="form-label-compact">
+                                        Email <span class="text-danger">*</span>
+                                    </label>
+                                    <div style="position: relative;">
+                                        <input asp-for="Responsavel.Email" type="email" class="form-control form-control-compact" placeholder="seu@email.com" maxlength="50" id="emailInput" required />
+                                        <div class="loading-spinner" id="email-spinner"></div>
+                                    </div>
+                                    @* <span asp-validation-for="Responsavel.Email" class="text-danger small"></span> *@
+                                    <div class="validation-error-custom" id="email-error"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-compact">
+                                    <label asp-for="Responsavel.Senha" class="form-label-compact">
+                                        @* Senha <span class="text-danger">*</span> *@
+                                    </label>
+                                    <input asp-for="Responsavel.Senha" type="password" class="form-control form-control-compact" placeholder="Digite sua senha" minlength="6" required />
+                                    <small class="form-text text-muted" style="font-size: 0.75rem;">Mínimo de 6 caracteres</small>
+                                    @* <span asp-validation-for="Responsavel.Senha" class="text-danger small"></span> *@
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-compact">
+                                    <label class="form-label-compact">
+                                        @* Confirmar Senha <span class="text-danger">*</span> *@
+                                    </label>
+                                    <input name="ConfirmarSenha" type="password" class="form-control form-control-compact" placeholder="Confirme sua senha" minlength="6" required />
+                                    <span class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-0">
+                            <label asp-for="Responsavel.Endereco" class="form-label-compact">
+                                Endereço <span class="text-danger">*</span>
+                            </label>
+                            <textarea asp-for="Responsavel.Endereco" class="form-control form-control-compact" rows="2" placeholder="Rua, número, bairro, cidade, CEP" maxlength="60" required></textarea>
+                            @* <span asp-validation-for="Responsavel.Endereco" class="text-danger small"></span> *@
+                        </div>
+                    </div>
+
+                    <div class="step-navigation">
+                        <div></div>
+                        <button type="button" class="btn btn-primary btn-compact" onclick="proximaEtapa()">
+                            Próxima Etapa <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Etapa 2: Dados das Crianças -->
+                <div class="step-content" id="step2-content">
+                    <div class="form-section">
+                        <div class="section-title">
+                            <i class="fas fa-child" style="color: var(--cor-info);"></i>
+                            Dados das Crianças (Obrigatório pelo menos uma)
+                        </div>
+
+                        <div id="criancas-container">
+                            @for (int i = 0; i < Model.Criancas.Count; i++)
+                            {
+                                <div class="form-section-crianca crianca-form" data-index="@i">
+                                    @if (i > 0)
+                                    {
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-btn" onclick="removerCrianca(@i)">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    }
+
+                                    <div class="crianca-header">
+                                        <span><i class="fas fa-child"></i> Criança @(i + 1)</span>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-compact">
+                                                <label asp-for="Criancas[@i].Nome" class="form-label-compact">Nome da Criança <span class="text-danger">*</span></label>
+                                                <input asp-for="Criancas[@i].Nome" class="form-control form-control-compact" placeholder="Nome completo da criança" required />
+                                                @* <span asp-validation-for="Criancas[@i].Nome" class="text-danger small"></span> *@
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-compact">
+                                                <label asp-for="Criancas[@i].Cpf" class="form-label-compact">CPF <span class="text-danger">*</span></label>
+                                                <input asp-for="Criancas[@i].Cpf" class="form-control form-control-compact cpf-crianca" placeholder="000.000.000-00" required />
+                                                @* <span asp-validation-for="Criancas[@i].Cpf" class="text-danger small"></span> *@
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-0">
+                                                <label asp-for="Criancas[@i].DataNascimento" class="form-label-compact">Data de Nascimento <span class="text-danger">*</span></label>
+                                                <input asp-for="Criancas[@i].DataNascimento" type="date" class="form-control form-control-compact" required />
+                                                @* <span asp-validation-for="Criancas[@i].DataNascimento" class="text-danger small"></span> *@
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-0">
+                                                <label asp-for="Criancas[@i].Parentesco" class="form-label-compact">Parentesco <span class="text-danger">*</span></label>
+                                                <select asp-for="Criancas[@i].Parentesco" class="form-control form-control-compact" required>
+                                                    <option value="">Selecione...</option>
+                                                    @foreach (var parentesco in Model.OpcoesParentesco)
+                                                    {
+                                                        <option value="@parentesco">@parentesco</option>
+                                                    }
+                                                </select>
+                                                @* <span asp-validation-for="Criancas[@i].Parentesco" class="text-danger small"></span> *@
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <button type="button" class="btn btn-outline-info btn-compact" onclick="adicionarCrianca()">
+                            <i class="fas fa-plus"></i> Adicionar Outra Criança
+                        </button>
+                    </div>
+
+                    <div class="step-navigation">
+                        <button type="button" class="btn btn-outline-secondary btn-compact" onclick="etapaAnterior()">
+                            <i class="fas fa-arrow-left"></i> Etapa Anterior
+                        </button>
+                        <button type="submit" id="btnFinalizarCadastro" class="btn btn-success btn-compact">
+                            <i class="fas fa-check"></i> Finalizar Cadastro
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    var criancaIndex = @Model.Criancas.Count;
+    var opcoesParentesco = @Html.Raw(Json.Serialize(Model.OpcoesParentesco));
+    var etapaAtual = 1;
+    var validacoesPendentes = new Set();
+
+    // ====================================================================================
+    // VALIDAÇÃO DE CPF
+    // ====================================================================================
+    function validarCPF(cpf) {
+        cpf = cpf.replace(/\D/g, '');
+        if (cpf.length !== 11) return false;
+        if (/^(\d)\1{10}$/.test(cpf)) return false;
+        
+        let soma = 0;
+        for (let i = 0; i < 9; i++) {
+            soma += parseInt(cpf.charAt(i)) * (10 - i);
+        }
+        let resto = 11 - (soma % 11);
+        if (resto === 10 || resto === 11) resto = 0;
+        if (resto !== parseInt(cpf.charAt(9))) return false;
+        
+        soma = 0;
+        for (let i = 0; i < 10; i++) {
+            soma += parseInt(cpf.charAt(i)) * (11 - i);
+        }
+        resto = 11 - (soma % 11);
+        if (resto === 10 || resto === 11) resto = 0;
+        if (resto !== parseInt(cpf.charAt(10))) return false;
+        
+        return true;
+    }
+
+    // ====================================================================================
+    // VALIDAÇÕES ASSÍNCRONAS (CPF, EMAIL, TELEFONE)
+    // ====================================================================================
+    async function verificarCpfExistente(cpf, inputElement, errorElement, spinnerId) {
+        const cpfLimpo = cpf.replace(/\D/g, '');
+
+        if (cpfLimpo.length !== 11) {
+            return true; // Deixa a validação padrão tratar
+        }
+
+        if (!validarCPF(cpf)) {
+            errorElement.textContent = 'CPF inválido';
+            errorElement.style.display = 'block';
+            inputElement.classList.add('is-invalid');
+            inputElement.classList.remove('is-valid'); // ADICIONE ESTA LINHA
+            return false;
+        }
+
+        const spinner = document.getElementById(spinnerId);
+        spinner.style.display = 'inline-block';
+        validacoesPendentes.add(spinnerId);
+
+        try {
+            const response = await fetch('/Responsavel/ValidarCpf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cpf: cpfLimpo })
+            });
+
+            const data = await response.json();
+
+            if (data.existe) {
+                errorElement.textContent = 'Este CPF já está cadastrado no sistema';
+                errorElement.style.display = 'block';
+                inputElement.classList.add('is-invalid');
+                inputElement.classList.remove('is-valid'); // ADICIONE ESTA LINHA
+                return false;
+            } else {
+                errorElement.style.display = 'none';
+                errorElement.textContent = ''; // ADICIONE ESTA LINHA
+                inputElement.classList.remove('is-invalid');
+                inputElement.classList.add('is-valid'); // ADICIONE ESTA LINHA
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao validar CPF:', error);
+            return true;
+        } finally {
+            spinner.style.display = 'none';
+            validacoesPendentes.delete(spinnerId);
+        }
+    }
+
+    async function verificarEmailExistente(email, inputElement, errorElement, spinnerId) {
+        const emailRegex = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+        if (!emailRegex.test(email)) {
+            return true;
+        }
+
+        const spinner = document.getElementById(spinnerId);
+        spinner.style.display = 'inline-block';
+        validacoesPendentes.add(spinnerId);
+
+        try {
+            const response = await fetch('/Responsavel/ValidarEmail', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email })
+            });
+
+            const data = await response.json();
+            
+            if (data.existe) {
+                errorElement.textContent = 'Este email já está cadastrado no sistema';
+                errorElement.style.display = 'block';
+                inputElement.classList.add('is-invalid');
+                return false;
+            } else {
+                errorElement.style.display = 'none';
+                inputElement.classList.remove('is-invalid');
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao validar email:', error);
+            return true;
+        } finally {
+            spinner.style.display = 'none';
+            validacoesPendentes.delete(spinnerId);
+        }
+    }
+
+    async function verificarTelefoneExistente(telefone, inputElement, errorElement, spinnerId) {
+        const telefoneLimpo = telefone.replace(/\D/g, '');
+        if (telefoneLimpo.length < 10) {
+            return true;
+        }
+
+        const spinner = document.getElementById(spinnerId);
+        spinner.style.display = 'inline-block';
+        validacoesPendentes.add(spinnerId);
+
+        try {
+            const response = await fetch('/Responsavel/ValidarTelefone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telefone: telefoneLimpo })
+            });
+
+            const data = await response.json();
+            
+            if (data.existe) {
+                errorElement.textContent = 'Este telefone já está cadastrado no sistema';
+                errorElement.style.display = 'block';
+                inputElement.classList.add('is-invalid');
+                return false;
+            } else {
+                errorElement.style.display = 'none';
+                inputElement.classList.remove('is-invalid');
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao validar telefone:', error);
+            return true;
+        } finally {
+            spinner.style.display = 'none';
+            validacoesPendentes.delete(spinnerId);
+        }
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction() {
+            const args = arguments;
+            const later = function() {
+                clearTimeout(timeout);
+                func.apply(this, args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    //Função para checar se o cpf já se encontra cadastrado no sistema
+        async function verificarCpfCriancaExistente(cpf, inputElement, index) {
+        const cpfLimpo = cpf.replace(/\D/g, '');
+
+        if (cpfLimpo.length !== 11 || !validarCPF(cpf)) {
+            return true; // Deixa a validação local tratar
+        }
+
+        try {
+            const response = await fetch('/Responsavel/ValidarCpf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cpf: cpfLimpo })
+            });
+
+            const data = await response.json();
+
+            if (data.existe) {
+                inputElement.classList.add('is-invalid');
+                mostrarErroCrianca(inputElement, 'Este CPF já está cadastrado no sistema');
+                return false;
+            } else {
+                // Remove erro se estava marcado como duplicado
+                const errorMsg = inputElement.parentElement.querySelector('.crianca-error-message');
+                if (errorMsg && errorMsg.textContent.includes('já está cadastrado')) {
+                    errorMsg.remove();
+                    inputElement.classList.remove('is-invalid');
+                }
+                return true;
+            }
+        } catch (error) {
+            console.error('Erro ao validar CPF da criança:', error);
+            return true;
+        }
+    }
+
+
+
+    // ====================================================================================
+    // NAVEGAÇÃO ENTRE ETAPAS
+    // ====================================================================================
+    async function proximaEtapa() {
+        if (validacoesPendentes.size > 0) {
+            ///alert('Aguarde a validação dos dados...');
+            return;
+        }
+
+        if (await validarEtapa1()) {
+            etapaAtual = 2;
+            mostrarEtapa(2);
+            atualizarIndicadores();
+        }
+    }
+
+    function etapaAnterior() {
+        etapaAtual = 1;
+        mostrarEtapa(1);
+        atualizarIndicadores();
+    }
+
+    function mostrarEtapa(numeroEtapa) {
+        document.querySelectorAll('.step-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById('step' + numeroEtapa + '-content').classList.add('active');
+    }
+
+    function atualizarIndicadores() {
+        const step1 = document.getElementById('step1-indicator');
+        const step2 = document.getElementById('step2-indicator');
+        const connector = document.getElementById('connector1');
+
+        step1.classList.remove('active', 'completed');
+        step2.classList.remove('active', 'completed');
+        connector.style.background = '#dee2e6';
+
+        if (etapaAtual === 1) {
+            step1.classList.add('active');
+        } else if (etapaAtual === 2) {
+            step1.classList.add('completed');
+            step2.classList.add('active');
+            connector.style.background = 'var(--cor-secundaria)';
+        }
+    }
+
+    // ====================================================================================
+    // VALIDAÇÃO ETAPA 1
+    // ====================================================================================
+        async function validarEtapa1() {
+        let isValid = true;
+
+        // Limpa todos os erros visuais primeiro
+        document.querySelectorAll('#step1-content .is-invalid').forEach(el => {
+            el.classList.remove('is-invalid');
+        });
+
+        // Validação de campos obrigatórios
+        const requiredFields = document.querySelectorAll('#step1-content input[required], #step1-content textarea[required]');
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            }
+        });
+
+        // Validação de Senha
+        const senhaInput = document.querySelector('input[name="Responsavel.Senha"]');
+        const confirmarSenhaInput = document.querySelector('input[name="ConfirmarSenha"]');
+        const senha = senhaInput.value;
+        const confirmarSenha = confirmarSenhaInput.value;
+
+        if (senha !== confirmarSenha || senha.length < 6) {
+            confirmarSenhaInput.classList.add('is-invalid');
+            if (senha !== confirmarSenha) {
+                //alert('As senhas não coincidem!');
+            } else {
+                //alert('A senha deve ter no mínimo 6 caracteres!');
+            }
+            isValid = false;
+        }
+
+        // Validação específica do CPF DO RESPONSÁVEL (AGUARDA VALIDAÇÃO ASSÍNCRONA)
+        const cpfInput = document.getElementById('cpfInput');
+        const cpfError = document.getElementById('cpf-error');
+        const cpfValue = cpfInput.value;
+
+        if (cpfValue.length !== 14) {
+            cpfError.textContent = 'CPF incompleto (formato: 000.000.000-00)';
+            cpfError.style.display = 'block';
+            cpfInput.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            const cpfValido = validarCPF(cpfValue);
+
+            if (!cpfValido) {
+                cpfError.textContent = 'CPF inválido';
+                cpfError.style.display = 'block';
+                cpfInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                // CPF tem formato válido, agora FAZ A VALIDAÇÃO ASSÍNCRONA
+                const cpfExisteNoBanco = await verificarCpfExistente(
+                    cpfValue,
+                    cpfInput,
+                    cpfError,
+                    'cpf-spinner'
+                );
+
+                if (!cpfExisteNoBanco) {
+                    // CPF já existe no banco (responsável ou criança)
+                    cpfInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    // Tudo OK com o CPF
+                    cpfError.style.display = 'none';
+                    cpfError.textContent = '';
+                    cpfInput.classList.remove('is-invalid');
+                }
+            }
+        }
+
+        // Verifica validações assíncronas de Email e Telefone
+        const emailError = document.getElementById('email-error');
+        const telefoneError = document.getElementById('telefone-error');
+
+        if (emailError.style.display === 'block') {
+            document.getElementById('emailInput').classList.add('is-invalid');
+            isValid = false;
+        }
+
+        if (telefoneError.style.display === 'block') {
+            document.getElementById('telefoneInput').classList.add('is-invalid');
+            isValid = false;
+        }
+
+        if (!isValid) {
+            const firstInvalid = document.querySelector('#step1-content .is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            //alert('Por favor, corrija os erros antes de prosseguir.');
+        }
+
+        return isValid;
+    }
+
+    // ====================================================================================
+    // VALIDAÇÃO ETAPA 2 (CRIANÇAS)
+    // ====================================================================================
+        async function validarEtapa2() {
+        let isValid = true;
+        const criancaForms = document.querySelectorAll('.crianca-form');
+        const cpfsCriancas = [];
+        const cpfResponsavel = document.getElementById('cpfInput').value.replace(/\D/g, '');
+        const validacoesAssincronas = [];
+
+        criancaForms.forEach((form, index) => {
+            // Limpa erros anteriores
+            form.querySelectorAll('.is-invalid').forEach(el => {
+                el.classList.remove('is-invalid');
+            });
+            form.querySelectorAll('.crianca-error-message').forEach(el => {
+                el.remove();
+            });
+
+            // Validar campos obrigatórios
+            const nomeInput = form.querySelector('input[name*=".Nome"]');
+            const cpfInput = form.querySelector('.cpf-crianca');
+            const dataNascInput = form.querySelector('input[type="date"]');
+            const parentescoSelect = form.querySelector('select[name*=".Parentesco"]');
+
+            // Validação de Nome
+            if (!nomeInput.value.trim()) {
+                nomeInput.classList.add('is-invalid');
+                mostrarErroCrianca(nomeInput, 'Nome é obrigatório');
+                isValid = false;
+            }
+
+            // Validação de Parentesco
+            if (!parentescoSelect.value) {
+                parentescoSelect.classList.add('is-invalid');
+                mostrarErroCrianca(parentescoSelect, 'Selecione o parentesco');
+                isValid = false;
+            }
+
+            // Validação de Data de Nascimento
+            if (!dataNascInput.value) {
+                dataNascInput.classList.add('is-invalid');
+                mostrarErroCrianca(dataNascInput, 'Data de nascimento é obrigatória');
+                isValid = false;
+            } else {
+                const dataNasc = new Date(dataNascInput.value);
+                const hoje = new Date();
+                let idade = hoje.getFullYear() - dataNasc.getFullYear();
+                const m = hoje.getMonth() - dataNasc.getMonth();
+
+                if (m < 0 || (m === 0 && hoje.getDate() < dataNasc.getDate())) {
+                    idade--;
+                }
+
+                if (dataNasc > hoje) {
+                    dataNascInput.classList.add('is-invalid');
+                    mostrarErroCrianca(dataNascInput, 'Data não pode ser futura');
+                    isValid = false;
+                } else if (idade >= 18) {
+                    dataNascInput.classList.add('is-invalid');
+                    mostrarErroCrianca(dataNascInput, 'A criança deve ter menos de 18 anos');
+                    isValid = false;
+                }
+            }
+
+            // Validação de CPF da criança
+            if (!cpfInput.value.trim()) {
+                cpfInput.classList.add('is-invalid');
+                mostrarErroCrianca(cpfInput, 'CPF é obrigatório');
+                isValid = false;
+            } else {
+                const cpfPuro = cpfInput.value.replace(/\D/g, '');
+
+                if (cpfPuro.length !== 11) {
+                    cpfInput.classList.add('is-invalid');
+                    mostrarErroCrianca(cpfInput, 'CPF incompleto (11 dígitos)');
+                    isValid = false;
+                } else if (!validarCPF(cpfInput.value)) {
+                    cpfInput.classList.add('is-invalid');
+                    mostrarErroCrianca(cpfInput, 'CPF inválido');
+                    isValid = false;
+                } else if (cpfPuro === cpfResponsavel) {
+                    cpfInput.classList.add('is-invalid');
+                    mostrarErroCrianca(cpfInput, 'CPF da criança não pode ser igual ao do responsável');
+                    isValid = false;
+                } else {
+                    cpfsCriancas.push({ cpf: cpfPuro, input: cpfInput, index: index });
+                    // Adiciona validação assíncrona na fila
+                    validacoesAssincronas.push(verificarCpfCriancaExistente(cpfInput.value, cpfInput, index));
+                }
+            }
+        });
+
+        // Verificar CPFs duplicados entre crianças
+        const cpfsUnicos = {};
+        cpfsCriancas.forEach(item => {
+            if (cpfsUnicos[item.cpf]) {
+                item.input.classList.add('is-invalid');
+                cpfsUnicos[item.cpf].input.classList.add('is-invalid');
+                mostrarErroCrianca(item.input, 'CPF duplicado com outra criança');
+                mostrarErroCrianca(cpfsUnicos[item.cpf].input, 'CPF duplicado com outra criança');
+                isValid = false;
+            } else {
+                cpfsUnicos[item.cpf] = item;
+            }
+        });
+
+        // Aguarda todas as validações assíncronas
+        if (validacoesAssincronas.length > 0) {
+            const resultados = await Promise.all(validacoesAssincronas);
+            if (resultados.some(r => r === false)) {
+                isValid = false;
+            }
+        }
+
+        if (!isValid) {
+            const firstInvalid = document.querySelector('#step2-content .is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            //alert('Por favor, corrija os erros nos dados das crianças.');
+        }
+
+        return isValid;
+    }
+
+    // Função auxiliar para mostrar mensagens de erro
+    function mostrarErroCrianca(inputElement, mensagem) {
+        // Remove mensagem anterior se existir
+        const errorAnterior = inputElement.parentElement.querySelector('.crianca-error-message');
+        if (errorAnterior) {
+            errorAnterior.remove();
+        }
+
+        // Cria nova mensagem
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'crianca-error-message show';
+        errorDiv.textContent = mensagem;
+
+        // Insere após o input
+        inputElement.parentElement.appendChild(errorDiv);
+    }
+
+    // ====================================================================================
+    // MÁSCARAS
+    // ====================================================================================
+    function aplicarMascaraCPF(input) {
+        input.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                e.target.value = value;
+            }
+        });
+    }
+
+    function aplicarMascaraTelefone(input) {
+        input.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                e.target.value = value;
+            }
+        });
+    }
+
+    // ====================================================================================
+    // GERENCIAMENTO DE CRIANÇAS
+    // ====================================================================================
+    function adicionarCrianca() {
+        var container = document.getElementById('criancas-container');
+
+        var novaCriancaHtml = '<div class="form-section-crianca crianca-form" data-index="' + criancaIndex + '">' +
+            '<button type="button" class="btn btn-outline-danger btn-sm remove-btn" onclick="removerCrianca(' + criancaIndex + ')">' +
+            '<i class="fas fa-times"></i></button>' +
+            '<div class="crianca-header"><span><i class="fas fa-child"></i> Criança ' + (criancaIndex + 1) + '</span></div>' +
+            '<div class="row">' +
+            '<div class="col-md-6"><div class="mb-compact">' +
+            '<label class="form-label-compact">Nome da Criança <span class="text-danger">*</span></label>' +
+            '<input name="Criancas[' + criancaIndex + '].Nome" class="form-control form-control-compact" placeholder="Nome completo da criança" required /></div></div>' +
+            '<div class="col-md-6"><div class="mb-compact">' +
+            '<label class="form-label-compact">CPF <span class="text-danger">*</span></label>' +
+            '<input name="Criancas[' + criancaIndex + '].Cpf" class="form-control form-control-compact cpf-crianca" placeholder="000.000.000-00" required /></div></div>' +
+            '</div><div class="row">' +
+            '<div class="col-md-6"><div class="mb-0">' +
+            '<label class="form-label-compact">Data de Nascimento <span class="text-danger">*</span></label>' +
+            '<input name="Criancas[' + criancaIndex + '].DataNascimento" type="date" class="form-control form-control-compact" required /></div></div>' +
+            '<div class="col-md-6"><div class="mb-0">' +
+            '<label class="form-label-compact">Parentesco <span class="text-danger">*</span></label>' +
+            '<select name="Criancas[' + criancaIndex + '].Parentesco" class="form-control form-control-compact" required>' +
+            '<option value="">Selecione...</option>';
+
+        opcoesParentesco.forEach(function(parentesco) {
+            novaCriancaHtml += '<option value="' + parentesco + '">' + parentesco + '</option>';
+        });
+
+        novaCriancaHtml += '</select></div></div></div></div>';
+
+        container.insertAdjacentHTML('beforeend', novaCriancaHtml);
+
+        // Aplica máscara no CPF da nova criança
+        var novoCampoCpf = container.querySelector('input[name="Criancas[' + criancaIndex + '].Cpf"]');
+        aplicarMascaraCPF(novoCampoCpf);
+
+        criancaIndex++;
+        atualizarTitulosCriancas();
+    }
+
+    function removerCrianca(index) {
+        var criancaForms = document.querySelectorAll('.crianca-form');
+        if (criancaForms.length > 1) {
+            var criancaForm = document.querySelector('[data-index="' + index + '"]');
+            if (criancaForm) {
+                criancaForm.remove();
+                atualizarTitulosCriancas();
+            }
+        } else {
+            //alert('É obrigatório ter pelo menos uma criança cadastrada!');
+        }
+    }
+
+    function atualizarTitulosCriancas() {
+        var criancaForms = document.querySelectorAll('#criancas-container .crianca-form');
+        criancaIndex = criancaForms.length;
+
+        criancaForms.forEach((form, index) => {
+            var headerSpan = form.querySelector('.crianca-header span');
+            if (headerSpan) {
+                headerSpan.innerHTML = '<i class="fas fa-child"></i> Criança ' + (index + 1);
+            }
+
+            form.setAttribute('data-index', index);
+            form.querySelectorAll('[name^="Criancas["]').forEach(input => {
+                var oldName = input.getAttribute('name');
+                var newName = oldName.replace(/\[\d+\]/g, '[' + index + ']');
+                input.setAttribute('name', newName);
+
+                var validationSpan = document.querySelector(`span[data-valmsg-for="${oldName}"]`);
+                if (validationSpan) {
+                    validationSpan.setAttribute('data-valmsg-for', newName);
+                }
+            });
+
+            var removeBtn = form.querySelector('.remove-btn');
+            if (removeBtn) {
+                removeBtn.setAttribute('onclick', 'removerCrianca(' + index + ')');
+                if (criancaForms.length === 1) {
+                    removeBtn.style.display = 'none';
+                } else {
+                    removeBtn.style.display = 'block';
+                }
+            }
+        });
+    }
+
+    // ====================================================================================
+    // INICIALIZAÇÃO E SUBMIT DO FORMULÁRIO
+    // ====================================================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const cpfInput = document.getElementById('cpfInput');
+        const emailInput = document.getElementById('emailInput');
+        const telefoneInput = document.getElementById('telefoneInput');
+
+        aplicarMascaraCPF(cpfInput);
+        aplicarMascaraTelefone(telefoneInput);
+        document.querySelectorAll('.cpf-crianca').forEach(aplicarMascaraCPF);
+
+        // Validação de CPF
+        cpfInput.addEventListener('input', debounce(function() {
+            const cpf = this.value;
+            if (cpf.length === 14) {
+                verificarCpfExistente(cpf, this, document.getElementById('cpf-error'), 'cpf-spinner');
+            }
+        }, 500));
+
+        // Validação de Email
+        emailInput.addEventListener('input', debounce(function() {
+            const email = this.value;
+            if (email.length > 5 && email.includes('@@')) {
+                verificarEmailExistente(email, this, document.getElementById('email-error'), 'email-spinner');
+            }
+        }, 500));
+
+        // Validação de Telefone
+        telefoneInput.addEventListener('input', debounce(function() {
+            const telefone = this.value;
+            if (telefone.replace(/\D/g, '').length >= 10) {
+                verificarTelefoneExistente(telefone, this, document.getElementById('telefone-error'), 'telefone-spinner');
+            }
+        }, 500));
+    });
+        // CONFIGURAR CAMPOS DE DATA - facilita seleção
+    document.querySelectorAll('input[type="date"]').forEach(input => {
+        // Define data máxima como hoje (não pode selecionar futuro)
+        const hoje = new Date();
+        const dataMaxima = hoje.toISOString().split('T')[0];
+        input.setAttribute('max', dataMaxima);
+
+        // Define data mínima (18 anos atrás - idade máxima da criança)
+        const dataMinima = new Date();
+        dataMinima.setFullYear(dataMinima.getFullYear() - 18);
+        input.setAttribute('min', dataMinima.toISOString().split('T')[0]);
+
+        // Define valor padrão sugerido (10 anos atrás - idade média)
+        if (!input.value || input.value === '0001-01-01') {
+            const dataSugerida = new Date();
+            dataSugerida.setFullYear(dataSugerida.getFullYear() - 10);
+            input.value = dataSugerida.toISOString().split('T')[0];
+        }
+    });
+        // Submit do formulário
+        document.getElementById('cadastroForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        // PROTEÇÃO CONTRA DUPLO CLIQUE
+        const btnFinalizar = document.getElementById('btnFinalizarCadastro');
+        if (btnFinalizar.disabled) {
+            return false; // Já está processando
+        }
+
+        if (validacoesPendentes.size > 0) {
+            //alert('Aguarde a validação dos dados...');
+            return false;
+        }
+
+        // Se está na etapa 1, avisa para ir para etapa 2
+        if (etapaAtual === 1) {
+            //alert('Por favor, preencha os dados das crianças na próxima etapa.');
+            return false;
+        }
+
+        // Valida etapa 2 antes de submeter
+        const etapa2Valida = await validarEtapa2();
+
+        if (!etapa2Valida) {
+            return false;
+        }
+
+        // DESABILITA O BOTÃO E MOSTRA LOADING
+        btnFinalizar.disabled = true;
+        btnFinalizar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processando cadastro...';
+
+        // Remove máscaras antes de enviar
+        const cpfResponsavel = document.getElementById('cpfInput');
+        if (cpfResponsavel) {
+            cpfResponsavel.value = cpfResponsavel.value.replace(/\D/g, '');
+        }
+
+        const cpfsCriancas = document.querySelectorAll('.cpf-crianca');
+        cpfsCriancas.forEach(function(input) {
+            input.value = input.value.replace(/\D/g, '');
+        });
+
+        const telefoneInput = document.getElementById('telefoneInput');
+        if (telefoneInput) {
+            telefoneInput.value = telefoneInput.value.replace(/\D/g, '');
+        }
+
+        // Submete o formulário
+        this.submit();
+    });
+
+    // Validação em tempo real
+    document.addEventListener('blur', function(e) {
+        if (e.target.matches('input[required], textarea[required], select[required]')) {
+            if (!e.target.value.trim()) {
+                e.target.classList.add('is-invalid');
+            } else {
+                e.target.classList.remove('is-invalid');
+            }
+        }
+    }, true);
+</script>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

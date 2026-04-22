@@ -1,0 +1,253 @@
+@{
+    ViewData["Title"] = "Editar Dentista";
+}
+@model Pi_Odonto.ViewModels.DentistaViewModel
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-lg">
+                <div class="card-header bg-warning text-white text-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-edit"></i> Editar Dentista
+                    </h2>
+                </div>
+
+                <div class="card-body">
+                    <form asp-action="EditarDentista" asp-route-id="@Model.Id" method="post">
+                        <div asp-validation-summary="All" class="alert alert-danger"></div>
+
+                        <input type="hidden" asp-for="Id" />
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label asp-for="Nome" class="form-label fw-bold">
+                                        <i class="fas fa-user text-primary"></i> Nome do Dentista <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Nome" class="form-control" placeholder="Digite o nome completo do dentista" />
+                                    <span asp-validation-for="Nome" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cpfDisplay" class="form-label fw-bold">
+                                        <i class="fas fa-id-card text-primary"></i> CPF <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="cpfDisplay" placeholder="000.000.000-00" maxlength="14" required />
+                                    <input type="hidden" asp-for="Cpf" id="cpfInput" />
+                                    <span asp-validation-for="Cpf" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Cro" class="form-label fw-bold">
+                                        <i class="fas fa-certificate text-primary"></i> CRO <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Cro" class="form-control" placeholder="Digite o CRO" maxlength="10" />
+                                    <span asp-validation-for="Cro" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="telefoneDisplay" class="form-label fw-bold">
+                                        <i class="fas fa-phone text-primary"></i> Telefone <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="telefoneDisplay" placeholder="(11) 99999-9999" maxlength="15" required />
+                                    <input type="hidden" asp-for="Telefone" id="telefoneInput" />
+                                    <span asp-validation-for="Telefone" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label fw-bold">
+                                        <i class="fas fa-envelope text-primary"></i> Email <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Email" type="email" class="form-control" placeholder="dentista@email.com" maxlength="50" />
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label asp-for="Endereco" class="form-label fw-bold">
+                                        <i class="fas fa-map-marker-alt text-primary"></i> Endereço <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea asp-for="Endereco" class="form-control" rows="3" placeholder="Rua, número, bairro, cidade, CEP" maxlength="60"></textarea>
+                                    <span asp-validation-for="Endereco" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label asp-for="Situacao" class="form-label fw-bold">
+                                        <i class="fas fa-info-circle text-primary"></i> Situação <span class="text-danger">*</span>
+                                    </label>
+                                    <select asp-for="Situacao" class="form-select">
+                                        <option value="candidato">Candidato</option>
+                                        <option value="contratado">Contratado</option>
+                                        <option value="banco de talento">Banco de Talento</option>
+                                        <option value="desvinculado">Desvinculado</option>
+                                    </select>
+                                    <span asp-validation-for="Situacao" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Disponibilidade -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-calendar-check text-primary"></i> Disponibilidade de Horários <span class="text-danger">*</span>
+                            </label>
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle"></i>
+                                Selecione os turnos em que o dentista está disponível para trabalhar. Você pode selecionar múltiplos horários.
+                            </div>
+
+                            <div class="row">
+                                @{
+                                    var diasSemana = new[] { "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo" };
+                                }
+                                @foreach (var dia in diasSemana)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-4">
+                                        <div class="card" style="border: 2px solid #4a90e2; border-radius: 8px;">
+                                            <div class="card-header" style="background: linear-gradient(135deg, #2c5282, #4a90e2); color: white; text-align: center; font-weight: bold;">
+                                                @dia
+                                            </div>
+                                            <div class="card-body">
+                                                @for (int i = 0; i < Model.Disponibilidades.Count; i++)
+                                                {
+                                                    if (Model.Disponibilidades[i].DiaSemana == dia)
+                                                    {
+                                                        var turnoNome = "";
+                                                        if (Model.Disponibilidades[i].HoraInicio.Hours == 8)
+                                                        {
+                                                            turnoNome = "Manhã";
+                                                        }
+                                                        else if (Model.Disponibilidades[i].HoraInicio.Hours == 13)
+                                                        {
+                                                            turnoNome = "Tarde";
+                                                        }
+                                                        else if (Model.Disponibilidades[i].HoraInicio.Hours == 18)
+                                                        {
+                                                            turnoNome = "Noite";
+                                                        }
+
+                                                        <div class="form-check mb-2">
+                                                            <input type="checkbox"
+                                                                   asp-for="@Model.Disponibilidades[i].Selecionado"
+                                                                   class="form-check-input disponibilidade-checkbox"
+                                                                   id="disponibilidade_@i" />
+                                                            <input type="hidden" asp-for="@Model.Disponibilidades[i].DiaSemana" />
+                                                            <input type="hidden" asp-for="@Model.Disponibilidades[i].HoraInicio" />
+                                                            <input type="hidden" asp-for="@Model.Disponibilidades[i].HoraFim" />
+                                                            <label class="form-check-label" for="disponibilidade_@i" style="cursor: pointer;">
+                                                                <strong>@turnoNome</strong><br>
+                                                                <small class="text-muted">@Model.Disponibilidades[i].HoraInicio.ToString(@"hh\:mm") - @Model.Disponibilidades[i].HoraFim.ToString(@"hh\:mm")</small>
+                                                            </label>
+                                                        </div>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <span asp-validation-for="Disponibilidades" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="/Admin/Dentistas" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Voltar para Lista
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save"></i> Salvar Alterações
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script>
+        // Formatar CPF e Telefone ao carregar a página (para edição)
+        document.addEventListener('DOMContentLoaded', function() {
+            const cpfInput = document.getElementById('cpfInput');
+            const cpfDisplay = document.getElementById('cpfDisplay');
+
+            // Se já existe valor no campo hidden (carregado do banco)
+            if (cpfInput && cpfInput.value && cpfInput.value.length >= 11) {
+                let value = cpfInput.value.replace(/\D/g, '');
+                let formatted = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                cpfDisplay.value = formatted;
+            }
+
+            const telefoneInput = document.getElementById('telefoneInput');
+            const telefoneDisplay = document.getElementById('telefoneDisplay');
+
+            // Se já existe valor no campo hidden (carregado do banco)
+            if (telefoneInput && telefoneInput.value && telefoneInput.value.length >= 10) {
+                let value = telefoneInput.value.replace(/\D/g, '');
+                let formatted = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                telefoneDisplay.value = formatted;
+            }
+        });
+
+        // Máscara para CPF
+        document.getElementById('cpfDisplay').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                // Aplica a máscara no campo visível
+                let formatted = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                e.target.value = formatted;
+                // Atualiza o campo hidden com apenas números
+                document.getElementById('cpfInput').value = value;
+            }
+        });
+
+        // Máscara para telefone
+        document.getElementById('telefoneDisplay').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                // Aplica a máscara no campo visível
+                let formatted = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                e.target.value = formatted;
+                // Atualiza o campo hidden com apenas números
+                document.getElementById('telefoneInput').value = value;
+            }
+        });
+
+        // Validação do formulário
+        document.querySelector('form').addEventListener('submit', function(e) {
+            // Validação de disponibilidades
+            const checkboxes = document.querySelectorAll('.disponibilidade-checkbox:checked');
+            if (checkboxes.length === 0) {
+                e.preventDefault();
+                alert('Por favor, selecione pelo menos um turno de disponibilidade.');
+                return false;
+            }
+
+            // Garantir que os campos hidden têm apenas números
+            const cpfDisplay = document.getElementById('cpfDisplay').value;
+            const telefoneDisplay = document.getElementById('telefoneDisplay').value;
+
+            document.getElementById('cpfInput').value = cpfDisplay.replace(/\D/g, '');
+            document.getElementById('telefoneInput').value = telefoneDisplay.replace(/\D/g, '');
+        });
+    </script>
+}

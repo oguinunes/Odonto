@@ -1,0 +1,913 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Pi_Odonto.Data;
+using Pi_Odonto.Models;
+using Pi_Odonto.Helpers;
+using Pi_Odonto.ViewModels;
+using Pi_Odonto.Services;
+using System.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System;
+using IEmailService = Pi_Odonto.Services.IEmailService;
+
+namespace Pi_Odonto.Controllers
+{
+    [Authorize]
+    [Route("Admin")]
+    public class AdminController : Controller
+    {
+        private readonly AppDbContext _context;
+
+        public AdminController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        // Verificar se é admin
+        private bool IsAdmin()
+        {
+            return User.HasClaim("TipoUsuario", "Admin");
+        }
+
+        // GET: Dashboard Admin
+        [Route("Dashboard")]
+        public IActionResult Dashboard()
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            // Estatísticas para o dashboard
+            var totalResponsaveis = _context.Responsaveis.Count();
+            var responsaveisAtivos = _context.Responsaveis.Count(r => r.Ativo);
+            var cadastrosHoje = _context.Responsaveis.Count(r => r.DataCadastro.Date == DateTime.Today);
+            var cadastrosEsteMes = _context.Responsaveis.Count(r => r.DataCadastro.Month == DateTime.Now.Month && r.DataCadastro.Year == DateTime.Now.Year);
+
+            ViewBag.TotalResponsaveis = totalResponsaveis;
+            ViewBag.ResponsaveisAtivos = responsaveisAtivos;
+            ViewBag.CadastrosHoje = cadastrosHoje;
+            ViewBag.CadastrosEsteMes = cadastrosEsteMes;
+            //Consulta Numero de Candidatos a voluntariados
+            var candidatosVoluntarios = _context.Dentistas.Count(d => d.Situacao == "candidato");
+            ViewBag.CandidatosVoluntarios = candidatosVoluntarios;
+
+            // Últimos cadastros
+            var ultimosCadastros = _context.Responsaveis
+                .OrderByDescending(r => r.DataCadastro)
+                .Take(5)
+                .ToList();
+
+            return View(ultimosCadastros);
+        }
+
+        // GET: Lista de Responsáveis (Admin)
+        [Route("Responsaveis")]
+        public IActionResult Responsaveis(string busca = "", bool? ativo = null)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var query = _context.Responsaveis.AsQueryable();
+
+            // Filtro de busca
+            if (!string.IsNullOrEmpty(busca))
+            {
+                query = query.Where(r =>
+                    r.Nome.Contains(busca) ||
+                    r.Email.Contains(busca) ||
+                    r.Cpf.Contains(busca) ||
+                    r.Telefone.Contains(busca));
+            }
+
+            // Filtro de status
+            if (ativo.HasValue)
+            {
+                query = query.Where(r => r.Ativo == ativo.Value);
+            }
+
+            var responsaveis = query
+                .Include(r => r.Criancas)
+                .OrderByDescending(r => r.DataCadastro)
+                .ToList();
+
+            ViewBag.Busca = busca;
+            ViewBag.Ativo = ativo;
+
+            return View(responsaveis);
+        }
+
+        // GET: Visualizar Responsável
+        [Route("Responsaveis/Detalhes/{id}")]
+        public IActionResult DetalhesResponsavel(int id)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var responsavel = _context.Responsaveis
+                .Include(r => r.Criancas)
+                .FirstOrDefault(r => r.Id == id);
+
+            if (responsavel == null)
+            {
+                return NotFound();
+            }
+
+            return View(responsavel);
+        }
+
+        // GET: Editar Responsável (Admin)
+        [Route("Responsaveis/Editar/{id}")]
+        public IActionResult EditarResponsavel(int id)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var responsavel = _context.Responsaveis
+                .Include(r => r.Criancas)
+                .FirstOrDefault(r => r.Id == id);
+
+            if (responsavel == null)
+            {
+                return NotFound();
+            }
+
+            // Limpar senha para não mostrar
+            responsavel.Senha = "";
+
+            // Criar ViewModel
+            var viewModel = new ResponsavelCriancaViewModel
+            {
+                Responsavel = responsavel,
+                Criancas = responsavel.Criancas?.ToList() ?? new List<Crianca>(),
+                OpcoesParentesco = new List<string>
+                {
+                    "Pai", "Mãe", "Avô", "Avó", "Tio", "Tia", "Padrasto", "Madrasta", "Tutor Legal"
+                }
+            };
+
+            return View(viewModel);
+        }
+
+        // POST: Editar Responsável (Admin)
+        [HttpPost]
+        [Route("Responsaveis/Editar/{id}")]
+        [ValidateAntiForgeryToken]
+        public IActionResult EditarResponsavel(int id, ResponsavelCriancaViewModel viewModel)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            if (id != viewModel.Responsavel.Id)
+            {
+                return BadRequest();
+            }
+
+            var responsavelAtual = _context.Responsaveis.Find(id);
+            if (responsavelAtual == null)
+            {
+                return NotFound();
+            }
+
+            // Validar email único
+            if (_context.Responsaveis.Any(r => r.Email == viewModel.Responsavel.Email && r.Id != id))
+            {
+                ModelState.AddModelError("Responsavel.Email", "Este email já está em uso");
+            }
+
+            // Remove validação de senha se estiver vazia
+            if (string.IsNullOrEmpty(viewModel.Responsavel.Senha))
+            {
+                ModelState.Remove("Responsavel.Senha");
+                ModelState.Remove("ConfirmarSenha");
+            }
+
+            if (ModelState.IsValid)
+            {
+                // Remover máscara
+                viewModel.Responsavel.Cpf = viewModel.Responsavel.Cpf.Replace(".", "").Replace("-", "");
+                viewModel.Responsavel.Telefone = viewModel.Responsavel.Telefone.Replace("(", "").Replace(")", "").Replace(" ", "").Replace("-", "");
+
+                // Atualizar dados
+                responsavelAtual.Nome = viewModel.Responsavel.Nome;
+                responsavelAtual.Email = viewModel.Responsavel.Email;
+                responsavelAtual.Telefone = viewModel.Responsavel.Telefone;
+                responsavelAtual.Endereco = viewModel.Responsavel.Endereco;
+                responsavelAtual.Cpf = viewModel.Responsavel.Cpf;
+                responsavelAtual.Ativo = viewModel.Responsavel.Ativo;
+
+                // Se forneceu nova senha
+                if (!string.IsNullOrEmpty(viewModel.Responsavel.Senha))
+                {
+                    responsavelAtual.Senha = PasswordHelper.HashPassword(viewModel.Responsavel.Senha);
+                }
+
+                _context.Responsaveis.Update(responsavelAtual);
+                _context.SaveChanges();
+
+                TempData["Sucesso"] = "Responsável atualizado com sucesso!";
+                return RedirectToAction("Responsaveis");
+            }
+
+            // Se deu erro, recarregar as opções e as crianças
+            if (viewModel.OpcoesParentesco == null || !viewModel.OpcoesParentesco.Any())
+            {
+                viewModel.OpcoesParentesco = new List<string>
+                {
+                    "Pai", "Mãe", "Avô", "Avó", "Tio", "Tia", "Padrasto", "Madrasta", "Tutor Legal"
+                };
+            }
+
+            // Recarregar as crianças do banco se não existirem
+            if (viewModel.Criancas == null || !viewModel.Criancas.Any())
+            {
+                var responsavelComCriancas = _context.Responsaveis
+                    .Include(r => r.Criancas)
+                    .FirstOrDefault(r => r.Id == id);
+
+                viewModel.Criancas = responsavelComCriancas?.Criancas?.ToList() ?? new List<Crianca>();
+            }
+
+            return View(viewModel);
+        }
+
+        // POST: Desativar/Ativar Responsável
+        [HttpPost]
+        [Route("Responsaveis/ToggleStatus/{id}")]
+        [ValidateAntiForgeryToken]
+        public IActionResult ToggleStatus(int id)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var responsavel = _context.Responsaveis.Find(id);
+            if (responsavel == null)
+            {
+                TempData["Erro"] = "Responsável não encontrado.";
+                return RedirectToAction("Responsaveis");
+            }
+
+            responsavel.Ativo = !responsavel.Ativo;
+            _context.Responsaveis.Update(responsavel);
+            _context.SaveChanges();
+
+            TempData["Sucesso"] = $"Responsável {(responsavel.Ativo ? "ativado" : "desativado")} com sucesso!";
+            return RedirectToAction("Responsaveis");
+        }
+
+        // GET: Relatórios
+        [Route("Relatorios")]
+        public IActionResult Relatorios()
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            // Dados para relatórios
+            var totalResponsaveis = _context.Responsaveis.Count();
+            var responsaveisAtivos = _context.Responsaveis.Count(r => r.Ativo);
+            var responsaveisInativos = _context.Responsaveis.Count(r => !r.Ativo);
+
+            // Cadastros por mês (últimos 6 meses)
+            var cadastrosPorMes = new List<object>();
+            for (int i = 5; i >= 0; i--)
+            {
+                var data = DateTime.Now.AddMonths(-i);
+                var count = _context.Responsaveis.Count(r =>
+                    r.DataCadastro.Month == data.Month &&
+                    r.DataCadastro.Year == data.Year);
+
+                // Formatar mês em português
+                var mesNome = data.ToString("MMM/yyyy", new System.Globalization.CultureInfo("pt-BR"));
+                mesNome = char.ToUpper(mesNome[0]) + mesNome.Substring(1); // Primeira letra maiúscula
+
+                cadastrosPorMes.Add(new
+                {
+                    mes = mesNome,  // MINÚSCULO - JavaScript espera assim
+                    count = count   // MINÚSCULO - JavaScript espera assim
+                });
+            }
+
+            ViewBag.TotalResponsaveis = totalResponsaveis;
+            ViewBag.ResponsaveisAtivos = responsaveisAtivos;
+            ViewBag.ResponsaveisInativos = responsaveisInativos;
+            ViewBag.CadastrosPorMes = cadastrosPorMes;
+
+            return View();
+        }
+        // ========================================
+        // GERENCIAMENTO DE DENTISTAS (REFATORADO)
+        // ========================================
+
+        // GET: Lista de Dentistas (REFATORADO INCLUSÃO)
+        [Route("Dentistas")]
+        public IActionResult Dentistas(string busca = "", bool? ativo = null, string situacao = "")
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var query = _context.Dentistas.AsQueryable();
+
+            // Filtro de busca
+            if (!string.IsNullOrEmpty(busca))
+            {
+                query = query.Where(d =>
+                    d.Nome.Contains(busca) ||
+                    d.Email.Contains(busca) ||
+                    d.Cpf.Contains(busca) ||
+                    d.Telefone.Contains(busca) ||
+                    d.Cro.Contains(busca));
+            }
+
+            // Filtro de status
+            if (ativo.HasValue)
+            {
+                query = query.Where(d => d.Ativo == ativo.Value);
+            }
+
+            // Filtro de situação
+            if (!string.IsNullOrEmpty(situacao))
+            {
+                query = query.Where(d => d.Situacao != null && d.Situacao == situacao);
+            }
+
+            var dentistas = query
+                .OrderBy(d => d.Nome)
+                .ThenBy(d => d.Ativo ? 0 : 1) // Ativos primeiro
+                .ToList();
+
+            ViewBag.Busca = busca;
+            ViewBag.Ativo = ativo;
+            ViewBag.Situacao = situacao;
+
+            return View(dentistas);
+        }
+
+        // GET: Criar Dentista (REFATORADO)
+        [Route("CriarDentista")]
+        public IActionResult CriarDentista()
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var viewModel = DentistaViewModel.CriarComDisponibilidades();
+
+            return View(viewModel);
+        }
+
+        // POST: Criar Dentista (REFATORADO)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Route("CriarDentista")]
+        public async Task<IActionResult> CriarDentista(DentistaViewModel viewModel)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            // Remover formatação do CPF e Telefone antes de validar
+            if (!string.IsNullOrEmpty(viewModel.Cpf))
+            {
+                viewModel.Cpf = viewModel.Cpf.Replace(".", "").Replace("-", "");
+            }
+            if (!string.IsNullOrEmpty(viewModel.Telefone))
+            {
+                viewModel.Telefone = viewModel.Telefone.Replace("(", "").Replace(")", "").Replace(" ", "").Replace("-", "");
+            }
+
+            // Validar se pelo menos uma disponibilidade foi selecionada
+            if (viewModel.Disponibilidades == null || !viewModel.Disponibilidades.Any(d => d.Selecionado))
+            {
+                ModelState.AddModelError("", "Por favor, selecione pelo menos um turno de disponibilidade.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                if (viewModel.Disponibilidades == null || viewModel.Disponibilidades.Count == 0)
+                {
+                    viewModel = DentistaViewModel.CriarComDisponibilidades();
+                }
+                return View(viewModel);
+            }
+
+            var dentista = new Dentista
+            {
+                Nome = viewModel.Nome,
+                Cpf = viewModel.Cpf,
+                Cro = viewModel.Cro,
+                Endereco = viewModel.Endereco,
+                Email = viewModel.Email,
+                Telefone = viewModel.Telefone,
+                Ativo = false,
+                Situacao = "candidato",
+                Senha = PasswordHelper.HashPassword(viewModel.Cro + "123")
+            };
+
+            _context.Dentistas.Add(dentista);
+            await _context.SaveChangesAsync();
+
+            // Criar disponibilidades selecionadas
+            var disponibilidadesSelecionadas = viewModel.Disponibilidades
+                .Where(d => d.Selecionado)
+                .ToList();
+
+            foreach (var disponibilidade in disponibilidadesSelecionadas)
+            {
+                var disponibilidadeDentista = new DisponibilidadeDentista
+                {
+                    IdDentista = dentista.Id,
+                    DiaSemana = disponibilidade.DiaSemana,
+                    HoraInicio = disponibilidade.HoraInicio,
+                    HoraFim = disponibilidade.HoraFim,
+                    Ativo = true,
+                    DataCadastro = DateTime.Now
+                };
+
+                _context.DisponibilidadesDentista.Add(disponibilidadeDentista);
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["Sucesso"] = $"Dentista cadastrado com sucesso! Senha inicial: {viewModel.Cro}123";
+            return RedirectToAction("Dentistas");
+        }
+
+        // GET: Editar Dentista (REFATORADO INCLUSÃO)
+        [Route("EditarDentista/{id}")]
+        public async Task<IActionResult> EditarDentista(int id)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var dentista = await _context.Dentistas
+                .Include(d => d.Disponibilidades)
+                .FirstOrDefaultAsync(d => d.Id == id);
+
+            if (dentista == null)
+            {
+                TempData["Erro"] = "Dentista não encontrado.";
+                return RedirectToAction("Dentistas");
+            }
+
+            var viewModel = new DentistaViewModel
+            {
+                Id = dentista.Id,
+                Nome = dentista.Nome,
+                Cpf = dentista.Cpf,
+                Cro = dentista.Cro,
+                Endereco = dentista.Endereco,
+                Email = dentista.Email,
+                Telefone = dentista.Telefone,
+                Situacao = dentista.Situacao
+            };
+
+            // Carregar disponibilidades existentes
+            var disponibilidadesExistentes = dentista.Disponibilidades
+                .Where(d => d.Ativo)
+                .ToList();
+
+            viewModel = DentistaViewModel.CarregarComDisponibilidadesExistentes(viewModel, disponibilidadesExistentes);
+
+            return View(viewModel);
+        }
+
+        // POST: Editar Dentista (REFATORADO)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Route("EditarDentista/{id}")]
+        public async Task<IActionResult> EditarDentista(DentistaViewModel viewModel, [FromServices] IEmailService emailService)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            // Remover formatação do CPF e Telefone antes de validar
+            if (!string.IsNullOrEmpty(viewModel.Cpf))
+            {
+                viewModel.Cpf = viewModel.Cpf.Replace(".", "").Replace("-", "");
+            }
+            if (!string.IsNullOrEmpty(viewModel.Telefone))
+            {
+                viewModel.Telefone = viewModel.Telefone.Replace("(", "").Replace(")", "").Replace(" ", "").Replace("-", "");
+            }
+
+            // Validar se pelo menos uma disponibilidade foi selecionada
+            if (viewModel.Disponibilidades == null || !viewModel.Disponibilidades.Any(d => d.Selecionado))
+            {
+                ModelState.AddModelError("", "Por favor, selecione pelo menos um turno de disponibilidade.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                if (viewModel.Disponibilidades == null || viewModel.Disponibilidades.Count == 0)
+                {
+                    var dentistaTemp = await _context.Dentistas
+                        .Include(d => d.Disponibilidades)
+                        .FirstOrDefaultAsync(d => d.Id == viewModel.Id);
+                    
+                    if (dentistaTemp != null)
+                    {
+                        var disponibilidadesExistentes = dentistaTemp.Disponibilidades
+                            .Where(d => d.Ativo)
+                            .ToList();
+                        viewModel = DentistaViewModel.CarregarComDisponibilidadesExistentes(viewModel, disponibilidadesExistentes);
+                    }
+                }
+                return View(viewModel);
+            }
+
+            var dentista = await _context.Dentistas
+                .Include(d => d.Disponibilidades)
+                .FirstOrDefaultAsync(d => d.Id == viewModel.Id);
+
+            if (dentista == null)
+            {
+                TempData["Erro"] = "Dentista não encontrado.";
+                return RedirectToAction("Dentistas");
+            }
+
+            // Verificar se a situação mudou de "candidato" para "contratado"
+            bool mudouParaContratado = dentista.Situacao == "candidato" && viewModel.Situacao == "contratado";
+
+            // Atualizar dados básicos
+            dentista.Nome = viewModel.Nome;
+            dentista.Cpf = viewModel.Cpf;
+            dentista.Cro = viewModel.Cro;
+            dentista.Endereco = viewModel.Endereco;
+            dentista.Email = viewModel.Email;
+            dentista.Telefone = viewModel.Telefone;
+            dentista.Situacao = viewModel.Situacao;
+            
+            // Se mudou para contratado, ativar o dentista
+            if (mudouParaContratado)
+            {
+                dentista.Ativo = true;
+            }
+
+            // Desativar todas as disponibilidades existentes
+            foreach (var disponibilidadeExistente in dentista.Disponibilidades)
+            {
+                disponibilidadeExistente.Ativo = false;
+            }
+
+            // Criar novas disponibilidades selecionadas
+            var disponibilidadesSelecionadas = viewModel.Disponibilidades
+                .Where(d => d.Selecionado)
+                .ToList();
+
+            foreach (var disponibilidade in disponibilidadesSelecionadas)
+            {
+                // Verificar se já existe (mas está desativada)
+                var existente = dentista.Disponibilidades.FirstOrDefault(d => 
+                    d.DiaSemana == disponibilidade.DiaSemana &&
+                    d.HoraInicio == disponibilidade.HoraInicio &&
+                    d.HoraFim == disponibilidade.HoraFim);
+
+                if (existente != null)
+                {
+                    // Reativar a existente
+                    existente.Ativo = true;
+                    existente.DataCadastro = DateTime.Now;
+                }
+                else
+                {
+                    // Criar nova disponibilidade
+                    var novaDisponibilidade = new DisponibilidadeDentista
+                    {
+                        IdDentista = dentista.Id,
+                        DiaSemana = disponibilidade.DiaSemana,
+                        HoraInicio = disponibilidade.HoraInicio,
+                        HoraFim = disponibilidade.HoraFim,
+                        Ativo = true,
+                        DataCadastro = DateTime.Now
+                    };
+
+                    _context.DisponibilidadesDentista.Add(novaDisponibilidade);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Se mudou de candidato para contratado, enviar email de boas-vindas
+            if (mudouParaContratado)
+            {
+                try
+                {
+                    await emailService.EnviarEmailBoasVindasDentistaAsync(dentista.Email, dentista.Nome);
+                    TempData["Sucesso"] = "Dentista atualizado com sucesso! E-mail de boas-vindas enviado.";
+                }
+                catch (Exception ex)
+                {
+                    TempData["Sucesso"] = "Dentista atualizado com sucesso!";
+                    TempData["Erro"] = $"Houve erro ao enviar e-mail: {ex.Message}";
+                }
+            }
+            else
+            {
+                TempData["Sucesso"] = "Dentista atualizado com sucesso!";
+            }
+            
+            return RedirectToAction("Dentistas");
+        }
+
+        // POST: Toggle Ativo/Desativar Dentista
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Route("ToggleAtivoDentista/{id}")]
+        public async Task<IActionResult> ToggleAtivoDentista(int id)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var dentista = await _context.Dentistas.FindAsync(id);
+
+            if (dentista == null)
+            {
+                TempData["Erro"] = "Dentista não encontrado.";
+                return RedirectToAction("Dentistas");
+            }
+
+            // Alternar status ativo/inativo
+            dentista.Ativo = !dentista.Ativo;
+            await _context.SaveChangesAsync();
+
+            var mensagem = dentista.Ativo 
+                ? "Dentista ativado com sucesso!" 
+                : "Dentista desativado com sucesso!";
+            
+            TempData["Sucesso"] = mensagem;
+            return RedirectToAction("Dentistas");
+        }
+
+        // GET: Detalhes do Dentista (REFATORADO INCLUSÃO)
+        [Route("DetalhesDentista/{id}")]
+        public async Task<IActionResult> DetalhesDentista(int id)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var dentista = await _context.Dentistas
+                .Include(d => d.Disponibilidades)
+                .FirstOrDefaultAsync(d => d.Id == id);
+
+            if (dentista == null)
+            {
+                TempData["Erro"] = "Dentista não encontrado.";
+                return RedirectToAction("Dentistas");
+            }
+
+            return View(dentista);
+        }
+
+        // ========================================
+        // FUNCIONALIDADES - VOLUNTÁRIOS (MANTIDO)
+        // ========================================
+
+        // GET: Solicitações de Voluntários
+        [Route("Solicitacoes")]
+        public async Task<IActionResult> Solicitacoes(string filtro = "todas")
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var query = _context.SolicitacoesVoluntario.AsQueryable();
+
+            switch (filtro.ToLower())
+            {
+                case "pendentes":
+                    query = query.Where(s => s.Status == "Pendente");
+                    break;
+                case "aprovadas":
+                    query = query.Where(s => s.Status == "Aprovado");
+                    break;
+                case "rejeitadas":
+                    query = query.Where(s => s.Status == "Rejeitado");
+                    break;
+                case "nao_visualizadas":
+                    query = query.Where(s => !s.Visualizado);
+                    break;
+            }
+
+            var solicitacoes = await query
+                .OrderByDescending(s => s.DataSolicitacao)
+                .ToListAsync();
+
+            ViewBag.Filtro = filtro;
+            ViewBag.TotalNaoVisualizadas = await _context.SolicitacoesVoluntario.CountAsync(s => !s.Visualizado);
+            ViewBag.TotalPendentes = await _context.SolicitacoesVoluntario.CountAsync(s => s.Status == "Pendente");
+
+            return View(solicitacoes);
+        }
+
+        // POST: Marcar como visualizado
+        [HttpPost]
+        [Route("Solicitacoes/MarcarVisualizado/{id}")]
+        public async Task<IActionResult> MarcarComoVisualizado(int id)
+        {
+            if (!IsAdmin())
+            {
+                return Json(new { success = false, message = "Acesso negado" });
+            }
+
+            var solicitacao = await _context.SolicitacoesVoluntario.FindAsync(id);
+            if (solicitacao == null)
+            {
+                return Json(new { success = false, message = "Solicitação não encontrada" });
+            }
+
+            solicitacao.Visualizado = true;
+            solicitacao.DataResposta = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
+        }
+
+        // POST: Aprovar solicitação
+        [HttpPost]
+        [Route("Solicitacoes/Aprovar/{id}")]
+        public async Task<IActionResult> AprovarSolicitacao(int id, string? observacao)
+        {
+            if (!IsAdmin())
+            {
+                return Json(new { success = false, message = "Acesso negado" });
+            }
+
+            var solicitacao = await _context.SolicitacoesVoluntario.FindAsync(id);
+            if (solicitacao == null)
+            {
+                return Json(new { success = false, message = "Solicitação não encontrada" });
+            }
+
+            solicitacao.Status = "Aprovado";
+            solicitacao.Visualizado = true;
+            solicitacao.DataResposta = DateTime.Now;
+            solicitacao.ObservacaoAdmin = observacao;
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Solicitação aprovada com sucesso!" });
+        }
+
+        // POST: Rejeitar solicitação
+        [HttpPost]
+        [Route("Solicitacoes/Rejeitar/{id}")]
+        public async Task<IActionResult> RejeitarSolicitacao(int id, string? observacao)
+        {
+            if (!IsAdmin())
+            {
+                return Json(new { success = false, message = "Acesso negado" });
+            }
+
+            var solicitacao = await _context.SolicitacoesVoluntario.FindAsync(id);
+            if (solicitacao == null)
+            {
+                return Json(new { success = false, message = "Solicitação não encontrada" });
+            }
+
+            solicitacao.Status = "Rejeitado";
+            solicitacao.Visualizado = true;
+            solicitacao.DataResposta = DateTime.Now;
+            solicitacao.ObservacaoAdmin = observacao;
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Solicitação rejeitada." });
+        }
+
+        // GET: Candidatos Voluntários
+        [Route("CandidatosVoluntarios")]
+        public IActionResult CandidatosVoluntarios()
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            // Buscar todos os dentistas com situacao = "candidato"
+            var candidatos = _context.Dentistas
+                .Where(d => d.Situacao == "candidato")
+                .OrderByDescending(d => d.Id)
+                .ToList();
+
+            return View(candidatos);
+        }
+
+        // POST: Aprovar Candidato
+        [HttpPost]
+        [Route("AprovarCandidato/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AprovarCandidato(int id, [FromServices] IEmailService emailService)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var dentista = await _context.Dentistas.FindAsync(id);
+            if (dentista == null)
+            {
+                TempData["Erro"] = "Candidato não encontrado.";
+                return RedirectToAction("CandidatosVoluntarios");
+            }
+
+            try
+            {
+                // Alterar situação para "contratado" e ativar
+                dentista.Situacao = "contratado";
+                dentista.Ativo = true;
+                await _context.SaveChangesAsync();
+
+                // Enviar e-mail de boas-vindas
+                await emailService.EnviarEmailBoasVindasDentistaAsync(dentista.Email, dentista.Nome);
+
+                TempData["Sucesso"] = $"Candidato {dentista.Nome} aprovado com sucesso! E-mail de boas-vindas enviado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Erro"] = $"Candidato aprovado, mas houve erro ao enviar e-mail: {ex.Message}";
+            }
+
+            return RedirectToAction("CandidatosVoluntarios");
+        }
+
+        // POST: Rejeitar Candidato
+        [HttpPost]
+        [Route("RejeitarCandidato/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejeitarCandidato(int id)
+        {
+            if (!IsAdmin())
+            {
+                return RedirectToAction("AdminLogin", "Auth");
+            }
+
+            var dentista = await _context.Dentistas.FindAsync(id);
+            if (dentista == null)
+            {
+                TempData["Erro"] = "Candidato não encontrado.";
+                return RedirectToAction("CandidatosVoluntarios");
+            }
+
+            // Alterar situação para "banco de talento"
+            dentista.Situacao = "banco de talento";
+            dentista.Ativo = false;
+            await _context.SaveChangesAsync();
+
+            TempData["Sucesso"] = $"Candidato {dentista.Nome} movido para banco de talento.";
+            return RedirectToAction("CandidatosVoluntarios");
+        }
+
+        // POST: Excluir solicitação
+        [HttpPost]
+        [Route("Solicitacoes/Excluir/{id}")]
+        public async Task<IActionResult> ExcluirSolicitacao(int id)
+        {
+            if (!IsAdmin())
+            {
+                TempData["Erro"] = "Acesso negado.";
+                return RedirectToAction("Solicitacoes");
+            }
+
+            var solicitacao = await _context.SolicitacoesVoluntario.FindAsync(id);
+            if (solicitacao != null)
+            {
+                _context.SolicitacoesVoluntario.Remove(solicitacao);
+                await _context.SaveChangesAsync();
+                TempData["Sucesso"] = "Solicitação excluída com sucesso.";
+            }
+            else
+            {
+                TempData["Erro"] = "Solicitação não encontrada.";
+            }
+
+            return RedirectToAction("Solicitacoes");
+        }
+    }
+}

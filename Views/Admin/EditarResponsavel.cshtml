@@ -1,0 +1,513 @@
+﻿@{
+    ViewData["Title"] = "Editar Responsável";
+}
+@using Pi_Odonto.ViewModels
+@model ResponsavelCriancaViewModel
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="text-warning">
+                <i class="fas fa-user-edit"></i> Editar Responsável
+            </h1>
+            <p class="text-muted">Modificar dados do responsável: <strong>@Model.Responsavel.Nome</strong></p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="/Admin/Responsaveis" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar à Lista
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Sucesso"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle"></i> @TempData["Sucesso"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                @* CORRIGIDO: Cor do Header para #0072B9 *@
+                <div class="card-header text-white" style="background-color: #0072B9!important;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit"></i> Dados do Responsável
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="EditarResponsavel" method="post" id="editForm">
+                        <input type="hidden" asp-for="Responsavel.Id" />
+
+                        @* CORRIGIDO: Removida a classe 'alert' para tirar a faixa vermelha/rosada de fundo *@
+                        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Responsavel.Nome" class="form-label">
+                                        <i class="fas fa-user"></i> Nome Completo <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Responsavel.Nome" class="form-control" placeholder="Nome completo do responsável" maxlength="50" required />
+                                    <span asp-validation-for="Responsavel.Nome" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Responsavel.Email" class="form-label">
+                                        <i class="fas fa-envelope"></i> Email <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Responsavel.Email" type="email" class="form-control" placeholder="email@exemplo.com" maxlength="50" required />
+                                    <span asp-validation-for="Responsavel.Email" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Responsavel.Cpf" class="form-label">
+                                        <i class="fas fa-id-card"></i> CPF <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Responsavel.Cpf" class="form-control" placeholder="000.000.000-00" id="cpfInput" maxlength="14" required />
+                                    <span asp-validation-for="Responsavel.Cpf" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Responsavel.Telefone" class="form-label">
+                                        <i class="fas fa-phone"></i> Telefone <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Responsavel.Telefone" class="form-control" placeholder="(11) 99999-9999" id="telefoneInput" maxlength="15" required />
+                                    <span asp-validation-for="Responsavel.Telefone" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Responsavel.Endereco" class="form-label">
+                                <i class="fas fa-map-marker-alt"></i> Endereço <span class="text-danger">*</span>
+                            </label>
+                            <textarea asp-for="Responsavel.Endereco" class="form-control" rows="3" placeholder="Endereço completo" maxlength="60" required></textarea>
+                            <span asp-validation-for="Responsavel.Endereco" class="text-danger"></span>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-lock"></i> Alterar Senha (Opcional)
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    Deixe em branco se não quiser alterar a senha atual.
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label asp-for="Responsavel.Senha" class="form-label">
+                                                <i class="fas fa-key"></i> Nova Senha
+                                            </label>
+                                            <input asp-for="Responsavel.Senha" type="password" class="form-control" placeholder="Digite a nova senha" minlength="6" />
+                                            <small class="form-text text-muted">Mínimo de 6 caracteres</small>
+                                            <span asp-validation-for="Responsavel.Senha" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">
+                                                <i class="fas fa-key"></i> Confirmar Nova Senha
+                                            </label>
+                                            <input name="ConfirmarSenha" type="password" class="form-control" placeholder="Confirme a nova senha" minlength="6" />
+                                            <span class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-toggle-on"></i> Status da Conta
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check form-switch">
+                                    <input asp-for="Responsavel.Ativo" class="form-check-input" type="checkbox" id="ativoSwitch" />
+                                    <label class="form-check-label" for="ativoSwitch">
+                                        <strong>Conta Ativa</strong>
+                                        <small class="text-muted d-block">Usuário pode fazer login no sistema</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-child"></i> Crianças Cadastradas
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="criancas-container">
+                                    @for (int i = 0; i < Model.Criancas.Count; i++)
+                                    {
+                                        <div class="crianca-form border p-3 mb-3" data-index="@i">
+                                            <h6>Criança @(i + 1)</h6>
+
+                                            <input asp-for="Criancas[@i].Id" type="hidden" />
+
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label asp-for="Criancas[@i].Nome" class="form-label">Nome da Criança</label>
+                                                    <input asp-for="Criancas[@i].Nome" class="form-control" />
+                                                    <span asp-validation-for="Criancas[@i].Nome" class="text-danger"></span>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label asp-for="Criancas[@i].Cpf" class="form-label">CPF</label>
+                                                    <input asp-for="Criancas[@i].Cpf" class="form-control" />
+                                                    <span asp-validation-for="Criancas[@i].Cpf" class="text-danger"></span>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-2">
+                                                <div class="col-md-6">
+                                                    <label asp-for="Criancas[@i].DataNascimento" class="form-label">Data de Nascimento</label>
+                                                    <input asp-for="Criancas[@i].DataNascimento" type="date" class="form-control" />
+                                                    <span asp-validation-for="Criancas[@i].DataNascimento" class="text-danger"></span>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label asp-for="Criancas[@i].Parentesco" class="form-label">Parentesco</label>
+                                                    <select asp-for="Criancas[@i].Parentesco" class="form-control">
+                                                        <option value="">Selecione...</option>
+                                                        @foreach (var parentesco in Model.OpcoesParentesco)
+                                                        {
+                                                            <option value="@parentesco" selected="@(Model.Criancas[i].Parentesco == parentesco ? "selected" : "")">@parentesco</option>
+                                                        }
+                                                    </select>
+                                                    <span asp-validation-for="Criancas[@i].Parentesco" class="text-danger"></span>
+                                                </div>
+                                            </div>
+
+                                            @if (i > 0)
+                                            {
+                                                <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="removerCrianca(@i)">
+                                                    <i class="fas fa-trash"></i> Remover Criança
+                                                </button>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+
+                                <button type="button" class="btn btn-outline-primary" onclick="adicionarCrianca()">
+                                    <i class="fas fa-plus"></i> Adicionar Outra Criança
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="/Admin/Responsaveis" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save"></i> Salvar Alterações
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                @* CORRIGIDO: Cor do Header para #0072B9 *@
+                <div class="card-header text-white" style="background-color: #0072B9!important;">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle"></i> Informações do Cadastro
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>ID:</strong> #@Model.Responsavel.Id
+                    </div>
+                    @if (Model.Responsavel.DataCadastro != default(DateTime))
+                    {
+                        <div class="mb-2">
+                            <strong>Data de Cadastro:</strong><br>
+                            @Model.Responsavel.DataCadastro.ToString("dd/MM/yyyy 'às' HH:mm")
+                        </div>
+                    }
+                    <div class="mb-2">
+                        <strong>Status Atual:</strong>
+                        @if (Model.Responsavel.Ativo)
+                        {
+                            <span class="badge bg-success">Ativo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Inativo</span>
+                        }
+                    </div>
+                    <div class="mb-2">
+                        <strong>Crianças:</strong> @Model.Criancas.Count cadastrada(s)
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt"></i> Ações Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        @* CORRIGIDO: Cor do botão "Ver Detalhes" para um azul mais escuro (btn-outline-primary) *@
+                        <a href="/Admin/Responsaveis/Detalhes/@Model.Responsavel.Id" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye"></i> Ver Detalhes
+                        </a>
+
+                        @* NOVO: Botão Toggle Status com Modal *@
+                        <form method="post" asp-action="ToggleStatus" asp-route-id="@Model.Responsavel.Id" class="d-inline js-action-form">
+                            <button type="button" 
+                                    class="btn @(Model.Responsavel.Ativo ? "btn-outline-warning" : "btn-outline-success") btn-sm w-100 js-confirm-action"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#confirmActionModal"
+                                    data-action-url="/Admin/Responsaveis/ToggleStatus/@Model.Responsavel.Id" 
+                                    data-message="Tem certeza que deseja @(Model.Responsavel.Ativo ? "DESATIVAR" : "ATIVAR") o responsável @Model.Responsavel.Nome?"
+                                    data-header-class="@(Model.Responsavel.Ativo ? "bg-warning" : "bg-success")"
+                                    data-confirm-text="@(Model.Responsavel.Ativo ? "Sim, Desativar" : "Sim, Ativar")"
+                                    data-is-danger="false">
+                                @if (Model.Responsavel.Ativo)
+                                {
+                                    <text><i class="fas fa-ban"></i> Desativar Conta</text>
+                                }
+                                else
+                                {
+                                    <text><i class="fas fa-check"></i> Ativar Conta</text>
+                                }
+                            </button>
+                        </form>
+
+                        <hr>
+
+                        @* REMOVIDO: Botão Excluir Permanentemente foi removido aqui. *@
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* NOVO MODAL DE CONFIRMAÇÃO (Para Ativar/Desativar) *@
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white" id="modalHeader">
+                <h5 class="modal-title" id="confirmActionModalLabel">Confirmação Necessária</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage" class="lead text-center">Tem certeza que deseja realizar esta ação?</p>
+                @* Este alerta será ocultado para a ação Toggle Status *@
+                <div class="alert alert-warning mt-3" id="modalWarning" style="display:none;">
+                    <i class="fas fa-exclamation-triangle"></i> Esta ação é permanente e não pode ser desfeita!
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmActionButton">
+                    <i class="fas fa-check"></i> Confirmar
+                </button>
+                <form method="post" id="actionForm" style="display: none;"></form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script>
+        var criancaIndex = @Model.Criancas.Count;
+        var opcoesParentesco = @Html.Raw(Json.Serialize(Model.OpcoesParentesco));
+
+        // --- LÓGICA DE MÁSCARAS ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const cpfInput = document.getElementById('cpfInput');
+            const telefoneInput = document.getElementById('telefoneInput');
+
+            if (cpfInput) {
+                if (cpfInput.value) {
+                    cpfInput.value = formatCPF(cpfInput.value);
+                }
+                cpfInput.addEventListener('input', function(e) {
+                    e.target.value = formatCPF(e.target.value);
+                });
+            }
+
+            if (telefoneInput) {
+                if (telefoneInput.value) {
+                    telefoneInput.value = formatTelefone(telefoneInput.value);
+                }
+                telefoneInput.addEventListener('input', function(e) {
+                    e.target.value = formatTelefone(e.target.value);
+                });
+            }
+        });
+
+        function formatCPF(value) {
+            value = value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            }
+            return value;
+        }
+
+        function formatTelefone(value) {
+            value = value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            }
+            return value;
+        }
+
+        // --- LÓGICA DE CRIANÇAS DINÂMICAS ---
+        function adicionarCrianca() {
+            var container = document.getElementById('criancas-container');
+
+            var novaCriancaHtml = `
+                <div class="crianca-form border p-3 mb-3" data-index="${criancaIndex}">
+                    <h6>Criança ${criancaIndex + 1}</h6>
+
+                    <input name="Criancas[${criancaIndex}].Id" type="hidden" value="0" />
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Nome da Criança</label>
+                            <input name="Criancas[${criancaIndex}].Nome" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">CPF</label>
+                            <input name="Criancas[${criancaIndex}].Cpf" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Data de Nascimento</label>
+                            <input name="Criancas[${criancaIndex}].DataNascimento" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Parentesco</label>
+                            <select name="Criancas[${criancaIndex}].Parentesco" class="form-control">
+                                <option value="">Selecione...</option>`;
+
+            opcoesParentesco.forEach(function(parentesco) {
+                novaCriancaHtml += `<option value="${parentesco}">${parentesco}</option>`;
+            });
+
+            novaCriancaHtml += `
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="removerCrianca(${criancaIndex})">
+                        <i class="fas fa-trash"></i> Remover Criança
+                    </button>
+                </div>`;
+
+            container.insertAdjacentHTML('beforeend', novaCriancaHtml);
+            criancaIndex++;
+        }
+
+        function removerCrianca(index) {
+            var criancaForms = document.querySelectorAll('.crianca-form');
+            if (criancaForms.length > 1) {
+                var criancaForm = document.querySelector(`[data-index="${index}"]`);
+                if (criancaForm) {
+                    criancaForm.remove();
+                    // Necessário reindexar o próximo form se você precisar manter a ordem exata.
+                    // Para o binding do MVC, a ordem é importante, mas a reindexação completa pode ser complexa.
+                    // Vamos apenas atualizar os títulos.
+                    atualizarTitulosCriancas(); 
+                }
+            } else {
+                alert('É obrigatório ter pelo menos uma criança cadastrada!');
+            }
+        }
+
+        function atualizarTitulosCriancas() {
+            var criancaForms = document.querySelectorAll('.crianca-form');
+            criancaForms.forEach(function(form, index) {
+                var titulo = form.querySelector('h6');
+                if (titulo) {
+                    titulo.textContent = `Criança ${index + 1}`;
+                }
+            });
+        }
+
+        // --- VALIDAÇÃO DE SENHAS (Mantida) ---
+        const senhaInput = document.querySelector('input[name="Responsavel.Senha"]');
+        const confirmarSenhaInput = document.querySelector('input[name="ConfirmarSenha"]');
+
+        if (senhaInput && confirmarSenhaInput) {
+            confirmarSenhaInput.addEventListener('blur', function() {
+                if (senhaInput.value && confirmarSenhaInput.value && senhaInput.value !== confirmarSenhaInput.value) {
+                    confirmarSenhaInput.classList.add('is-invalid');
+                } else {
+                    confirmarSenhaInput.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        // --- LÓGICA DO MODAL DE CONFIRMAÇÃO (Toggle Status) ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const confirmActionButton = document.getElementById('confirmActionButton');
+            const actionForm = document.getElementById('actionForm');
+
+            // Event listener para abrir o modal
+            document.querySelectorAll('.js-confirm-action').forEach(button => {
+                button.addEventListener('click', function (event) {
+                    
+                    const actionUrl = this.getAttribute('data-action-url');
+                    const message = this.getAttribute('data-message');
+                    const headerClass = this.getAttribute('data-header-class') || 'bg-danger';
+                    const confirmText = this.getAttribute('data-confirm-text') || 'Confirmar';
+                    const isDanger = this.getAttribute('data-is-danger') === 'true'; 
+
+                    const originalForm = this.closest('.js-action-form');
+                    
+                    document.getElementById('modalMessage').innerHTML = message;
+
+                    const modalHeader = document.getElementById('modalHeader');
+                    modalHeader.className = `modal-header text-white ${headerClass}`;
+
+                    confirmActionButton.className = `btn ${isDanger ? 'btn-danger' : 'btn-primary'}`;
+                    confirmActionButton.innerHTML = `<i class="fas fa-check"></i> ${confirmText}`;
+
+                    document.getElementById('modalWarning').style.display = isDanger ? 'block' : 'none';
+
+                    actionForm.action = actionUrl;
+                    actionForm.innerHTML = ''; 
+
+                    const antiForgeryToken = originalForm.querySelector('input[name="__RequestVerificationToken"]');
+                    if (antiForgeryToken) {
+                        actionForm.appendChild(antiForgeryToken.cloneNode(true));
+                    }
+                });
+            });
+
+            // Listener para o clique no botão de CONFIRMAR do modal
+            confirmActionButton.addEventListener('click', function() {
+                actionForm.submit();
+            });
+        });
+    </script>
+}
