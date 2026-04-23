@@ -1,0 +1,43 @@
+name: Deploy ASP.NET Project
+
+on:
+  push:
+    branches:
+      - main  
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout do código
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Configura o SDK do .NET
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x' # Ajuste para a versão que você está usando (6.0, 7.0, 8.0)
+
+      # 3. Restaura dependências e faz o Build
+      - name: Restore and Build
+        run: |
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+
+      # 4. Publica o projeto (gera os arquivos prontos para o servidor)
+      - name: Publish
+        run: dotnet publish -c Release -o ./publish
+
+      # 5. Deploy (Exemplo via SSH para um servidor Linux/VPS)
+      - name: Deploy to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          source: "./publish/*"
+          target: "/var/www/meu-app-aspnet"
+          strip_components: 1 # Remove a pasta 'publish' do caminho no destino
